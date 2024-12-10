@@ -180,7 +180,7 @@ function drawCubes() {
 }
 
 function drawTerrain() {
-    const verticalOffset = canvas.height * 0.2; // Adjust for vertical centering (20% upward shift)
+    const verticalOffset = canvas.height / 2; // Dynamically center the terrain vertically
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Dynamically calculate the center of the canvas
