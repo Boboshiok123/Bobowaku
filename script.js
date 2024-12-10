@@ -79,19 +79,22 @@ analyser.fftSize = 256;
 const frequencyData = new Uint8Array(analyser.frequencyBinCount);
 let audioSource = null;
 
-async function setupAudio() {
+async function setupBackgroundAudio() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioSource = audioContext.createMediaStreamSource(stream);
-        const gainNode = audioContext.createGain();
+        const response = await fetch('train_noise_to_techno.wav'); // Fetch the audio file
+        const audioData = await response.arrayBuffer();
+        const buffer = await audioContext.decodeAudioData(audioData);
 
-        audioSource.connect(analyser);
-        analyser.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true; // Loop the audio
+        source.connect(analyser); // Connect to analyser
+        source.connect(audioContext.destination); // Connect to speakers
+        source.start();
 
-        console.log("Microphone access granted");
+        console.log("Background audio playing");
     } catch (err) {
-        console.error("Microphone access denied", err);
+        console.error("Error loading background audio", err);
     }
 }
 
@@ -184,7 +187,8 @@ canvas.addEventListener("touchend", () => {
     speed = Math.max(1, speed - 1);
 });
 
-setupAudio();
+// Initialize everything
+setupBackgroundAudio(); // Load and play the background audio
 setupTerrain();
 animate();
 
