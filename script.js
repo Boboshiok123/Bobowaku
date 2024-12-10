@@ -122,9 +122,10 @@ function updateTerrain() {
 const cubes = [];
 
 class Cube {
-    constructor(size, position, depthFactor) {
+    constructor(size, position, color, depthFactor) {
         this.size = size; // Size of the cube
         this.position = position; // 3D position (x, y, z)
+        this.color = color; // Color of the cube
         this.depthFactor = depthFactor; // Scaling factor for perspective
     }
 
@@ -142,9 +143,16 @@ class Cube {
         const size = this.size * perspective;
 
         ctx.save();
-        ctx.strokeStyle = "rgb(0, 0, 255)"; // Blue stroke only for the cube
+        ctx.fillStyle = this.color; // Fill color of the cube
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"; // Border color for depth effect
 
-        // Draw the cube outline
+        // Draw the cube
+        ctx.fillRect(
+            canvas.width / 2 + screenX - size / 2,
+            canvas.height / 2 + screenY - size / 2,
+            size,
+            size
+        );
         ctx.strokeRect(
             canvas.width / 2 + screenX - size / 2,
             canvas.height / 2 + screenY - size / 2,
@@ -164,9 +172,10 @@ function spawnCubes() {
             y: Math.random() * canvas.height - canvas.height / 2,
             z: Math.random() * 1000 + 200 // Depth between 200 and 1200
         };
+        const color = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
         const depthFactor = 1; // Optional scaling factor
 
-        let cube = new Cube(size, position, depthFactor);
+        let cube = new Cube(size, position, color, depthFactor);
         cubes.push(cube);
     }
 }
@@ -180,40 +189,34 @@ function drawCubes() {
 }
 
 function drawTerrain() {
-    const verticalOffset = canvas.height / 2; // Dynamically center the terrain vertically
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Dynamically calculate the center of the canvas
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2 - verticalOffset;
-
-    ctx.save(); // Save the current state of the canvas
-    ctx.translate(centerX, centerY); // Center the terrain and shift it up
-    ctx.scale(1.5, 1.5); // Scale for better visibility on mobile
-    ctx.rotate(Math.PI / 2); // Rotate the terrain by 90 degrees
+    ctx.translate(canvas.width / 2, canvas.height / 2); // Center the view
+    ctx.scale(1.5, 1.5); // Zoom in the camera for better mobile visibility
+    ctx.rotate(Math.PI / 2); // Rotate the terrain 90 degrees
 
     ctx.strokeStyle = "rgb(0, 255, 0)";
 
     for (let y = 0; y < rows - 1; y++) {
         ctx.beginPath();
-        for (let x = 0; x <= cols; x++) { // Close the loop for the circle
-            const adjustedX = x % cols; // Wrap around for seamless connection
+        for (let x = 0; x <= cols; x++) { // Adjusted loop to close the circle
+            const adjustedX = x % cols; // Wrap around for the last connection
 
-            const theta = (adjustedX / cols) * Math.PI * 2; // Circular angle
-            const r = ((rows - 1 - y) / rows) * radius; // Radial distance
+            const theta = (adjustedX / cols) * Math.PI * 2; // Angle around circle
+            const r = ((rows - 1 - y) / rows) * radius; // Reverse radial distance for outward expansion
             const posX = Math.cos(theta) * r;
             const posY = Math.sin(theta) * r;
 
-            if (r < hollowRadius) continue; // Skip the hollow inner radius
+            if (r < hollowRadius) continue; // Skip inner radius
 
-            const z = terrain[adjustedX][y]; // Elevation
+            const z = terrain[adjustedX][y]; // Elevation value
             ctx.lineTo(posX, posY - z);
         }
         ctx.stroke();
     }
-    ctx.restore(); // Restore the canvas state
-}
+    ctx.resetTransform(); // Reset transformations
 
+    drawCubes();
+}
 
 function animate() {
     playerZ += speed; // Move the player forward
@@ -241,17 +244,8 @@ spawnCubes();
 animate();
 
 // Adjust canvas size for mobile devices
-function resizeCanvas() {
-    canvas.width = window.innerWidth; // Set to screen width
-    canvas.height = window.innerHeight; // Set to screen height
-    setupTerrain(); // Reinitialize the terrain with the new dimensions
-}
-
-// Listen for window resize events to keep the canvas responsive
-window.addEventListener('resize', resizeCanvas);
-
-// Initialize
-resizeCanvas();
-setupAudio();
-setupTerrain();
-animate();
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    setupTerrain(); // Reinitialize terrain for new dimensions
+});
