@@ -180,39 +180,40 @@ function drawCubes() {
 }
 
 function drawTerrain() {
-    const verticalOffset = canvas.height * 0.15; // Move up by 15% of the screen height
+    const verticalOffset = canvas.height * 0.2; // Adjust for vertical centering (20% upward shift)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Calculate center based on canvas size
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2 - verticalOffset; // Shift upward
 
-    ctx.save(); // Save the context state
-    ctx.translate(centerX, centerY); // Center the view on the screen
-    ctx.scale(1.5, 1.5); // Adjust the scale for better visibility
-    ctx.rotate(Math.PI / 2); // Rotate the terrain 90 degrees
+    // Dynamically calculate the center of the canvas
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2 - verticalOffset;
+
+    ctx.save(); // Save the current state of the canvas
+    ctx.translate(centerX, centerY); // Center the terrain and shift it up
+    ctx.scale(1.5, 1.5); // Scale for better visibility on mobile
+    ctx.rotate(Math.PI / 2); // Rotate the terrain by 90 degrees
 
     ctx.strokeStyle = "rgb(0, 255, 0)";
 
     for (let y = 0; y < rows - 1; y++) {
         ctx.beginPath();
-        for (let x = 0; x <= cols; x++) { // Adjusted loop to close the circle
-            const adjustedX = x % cols; // Wrap around for the last connection
+        for (let x = 0; x <= cols; x++) { // Close the loop for the circle
+            const adjustedX = x % cols; // Wrap around for seamless connection
 
-            const theta = (adjustedX / cols) * Math.PI * 2; // Angle around circle
-            const r = ((rows - 1 - y) / rows) * radius; // Reverse radial distance for outward expansion
+            const theta = (adjustedX / cols) * Math.PI * 2; // Circular angle
+            const r = ((rows - 1 - y) / rows) * radius; // Radial distance
             const posX = Math.cos(theta) * r;
             const posY = Math.sin(theta) * r;
 
-            if (r < hollowRadius) continue; // Skip inner radius
+            if (r < hollowRadius) continue; // Skip the hollow inner radius
 
-            const z = terrain[adjustedX][y]; // Elevation value
+            const z = terrain[adjustedX][y]; // Elevation
             ctx.lineTo(posX, posY - z);
         }
         ctx.stroke();
     }
-    ctx.restore(); // Restore the context state
+    ctx.restore(); // Restore the canvas state
 }
+
 
 function animate() {
     playerZ += speed; // Move the player forward
@@ -249,7 +250,7 @@ function resizeCanvas() {
 // Listen for window resize events to keep the canvas responsive
 window.addEventListener('resize', resizeCanvas);
 
-// Initialize everything
+// Initialize
 resizeCanvas();
 setupAudio();
 setupTerrain();
