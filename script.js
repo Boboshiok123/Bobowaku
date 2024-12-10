@@ -77,7 +77,20 @@ const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioContext.createAnalyser();
 analyser.fftSize = 256;
 const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-let audioSource = null;
+
+async function setupMicrophone() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const micSource = audioContext.createMediaStreamSource(stream);
+
+        // Only connect microphone to analyser, not to speakers
+        micSource.connect(analyser);
+
+        console.log("Microphone connected");
+    } catch (err) {
+        console.error("Microphone access denied", err);
+    }
+}
 
 async function setupBackgroundAudio() {
     try {
@@ -88,8 +101,7 @@ async function setupBackgroundAudio() {
         const source = audioContext.createBufferSource();
         source.buffer = buffer;
         source.loop = true; // Loop the audio
-        source.connect(analyser); // Connect to analyser
-        source.connect(audioContext.destination); // Connect to speakers
+        source.connect(audioContext.destination); // Connect only to speakers
         source.start();
 
         console.log("Background audio playing");
@@ -188,7 +200,8 @@ canvas.addEventListener("touchend", () => {
 });
 
 // Initialize everything
-setupBackgroundAudio(); // Load and play the background audio
+setupMicrophone(); // Connect the microphone but prevent feedback
+setupBackgroundAudio(); // Play background audio
 setupTerrain();
 animate();
 
