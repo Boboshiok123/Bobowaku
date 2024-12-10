@@ -147,7 +147,7 @@ function updateTerrain() {
 
 function drawTerrain() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.translate(canvas.width / 2, canvas.height / 3); // Center the view
+    ctx.translate(canvas.width / 2, canvas.height / 2.5); // Center the view
     ctx.scale(1.5, 1.5); // Zoom in the camera for better mobile visibility
     ctx.rotate(Math.PI / 2); // Rotate the terrain 90 degrees
 
