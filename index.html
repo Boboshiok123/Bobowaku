@@ -3,11 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Endless Runner Game</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Audio Reactive Terrain</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <div class="instructions">Press SPACE to Jump</div>
+    <div id="instructions">
+        Allow microphone access to visualize audio-reactive terrain.<br>
+        Make noise or play music for interaction!
+    </div>
+    <canvas id="visualization"></canvas>
+    <!-- Include your external JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>
