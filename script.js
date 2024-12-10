@@ -147,8 +147,15 @@ function updateTerrain() {
 }
 
 function drawTerrain() {
+    const verticalOffset = 100; // Adjust this value to move the terrain up
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.translate(canvas.width / 1, canvas.height / 1); // Center the view
+    
+    // Re-center and move terrain up
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2 - verticalOffset; // Adjust vertical position here
+    
+    ctx.save(); // Save the context state
+    ctx.translate(centerX, centerY); // Center the view and shift up
     ctx.scale(1.5, 1.5); // Zoom in the camera for better mobile visibility
     ctx.rotate(Math.PI / 2); // Rotate the terrain 90 degrees
 
@@ -171,8 +178,9 @@ function drawTerrain() {
         }
         ctx.stroke();
     }
-    ctx.resetTransform(); // Reset transformations
+    ctx.restore(); // Restore the context state
 }
+
 
 function animate() {
     playerZ += speed; // Move the player forward
