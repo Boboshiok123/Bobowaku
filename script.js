@@ -64,7 +64,6 @@ const simplex = new SimplexNoise();
 // Game setup
 const cols = 50; // Number of columns
 const rows = 50; // Number of rows
-const scl = 10; // Scale of each grid cell
 const radius = Math.min(canvas.width, canvas.height) / 3; // Radius of the circle
 const hollowRadius = radius / 3; // Radius of the hollow center
 let terrain = [];
@@ -77,16 +76,45 @@ const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioContext.createAnalyser();
 analyser.fftSize = 256;
 const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+let audioSource = null;
 
 async function setupAudio() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        console.log("Microphone access granted");
+        audioSource = audioContext.createMediaStreamSource(stream);
+        const gainNode = audioContext.createGain(); // Create a gain node to control volume
+
+        // Connect the audio source to the analyser
+        audioSource.connect(analyser);
+
+        // Connect the analyser to the gain node
+        analyser.connect(gainNode);
+
+        // Connect the gain node to the audio context's destination (speakers)
+        gainNode.connect(audioContext.destination);
+
+        console.log("Microphone access granted and audio connected to speakers");
+
+        // Test the audio output
+        testAudioOutput();
     } catch (err) {
         console.error("Microphone access denied", err);
     }
+}
+
+// Function to test speaker output with a simple sound
+function testAudioOutput() {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = "sine"; // Sine wave
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+    oscillator.connect(audioContext.destination);
+
+    // Start the oscillator for a brief period
+    oscillator.start();
+    setTimeout(() => {
+        oscillator.stop();
+        console.log("Audio test complete");
+    }, 1000);
 }
 
 function updateAudioData() {
@@ -118,67 +146,6 @@ function updateTerrain() {
     }
 }
 
-// Cube system setup
-const cubes = [];
-
-class Cube {
-    constructor(size, position, depthFactor) {
-        this.size = size; // Size of the cube
-        this.position = position; // 3D position (x, y, z)
-        this.depthFactor = depthFactor; // Scaling factor for perspective
-    }
-
-    update() {
-        this.position.z -= 5; // Move the cube closer to the viewer
-        if (this.position.z <= 0) {
-            this.position.z = Math.random() * 800 + 200; // Reset depth when too close
-        }
-    }
-
-    draw(ctx) {
-        const perspective = 200 / this.position.z; // Perspective scaling
-        const screenX = this.position.x * perspective;
-        const screenY = this.position.y * perspective;
-        const size = this.size * perspective;
-
-        ctx.save();
-        ctx.strokeStyle = "rgb(0, 0, 255)"; // Blue stroke only for the cube
-
-        // Draw the cube outline
-        ctx.strokeRect(
-            canvas.width / 2 + screenX - size / 2,
-            canvas.height / 2 + screenY - size / 2,
-            size,
-            size
-        );
-        ctx.restore();
-    }
-}
-
-function spawnCubes() {
-    const unitSize = 20; // Base size for cubes
-    for (let i = 0; i < 10; i++) { // Adjust number of cubes
-        const size = Math.random() * unitSize + unitSize / 2;
-        const position = {
-            x: Math.random() * canvas.width - canvas.width / 2,
-            y: Math.random() * canvas.height - canvas.height / 2,
-            z: Math.random() * 1000 + 200 // Depth between 200 and 1200
-        };
-        const depthFactor = 1; // Optional scaling factor
-
-        let cube = new Cube(size, position, depthFactor);
-        cubes.push(cube);
-    }
-}
-
-function updateCubes() {
-    cubes.forEach((cube) => cube.update());
-}
-
-function drawCubes() {
-    cubes.forEach((cube) => cube.draw(ctx));
-}
-
 function drawTerrain() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.translate(canvas.width / 2, canvas.height / 2); // Center the view
@@ -205,15 +172,12 @@ function drawTerrain() {
         ctx.stroke();
     }
     ctx.resetTransform(); // Reset transformations
-
-    drawCubes();
 }
 
 function animate() {
     playerZ += speed; // Move the player forward
     updateTerrain(); // Update the terrain
-    updateCubes(); // Update cube positions
-    drawTerrain(); // Draw the terrain and cubes
+    drawTerrain(); // Draw the terrain
     requestAnimationFrame(animate);
 }
 
@@ -231,7 +195,6 @@ setupAudio();
 
 // Initialize the terrain and start the animation
 setupTerrain();
-spawnCubes();
 animate();
 
 // Adjust canvas size for mobile devices
