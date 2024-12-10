@@ -1,119 +1,13 @@
-// Create the canvas and context for visualization
-const canvas = document.getElementById('visualization');
-const ctx = canvas.getContext('2d');
+// Create the canvas and context
+const canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
+const ctx = canvas.getContext('2d');
 
-// Set canvas size
+// Set canvas size to fit the screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Initialize WebSocket to communicate with Node.js
-const socket = new WebSocket("ws://localhost:8080");
-
-// Web Audio API setup for capturing microphone input and playback
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let micStream = null; // Microphone input stream
-let scriptNode = null; // ScriptProcessorNode for real-time processing
-const audioBufferQueue = []; // Queue for received audio from Node.js
-
-// Function to initialize microphone input
-async function initMic() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        micStream = audioCtx.createMediaStreamSource(stream);
-
-        // Create a ScriptProcessorNode to capture microphone data
-        const micProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
-        micStream.connect(micProcessor);
-        micProcessor.connect(audioCtx.destination);
-
-        // Send audio data to Node.js server
-        micProcessor.onaudioprocess = (event) => {
-            const inputData = event.inputBuffer.getChannelData(0);
-            const audioData = new Float32Array(inputData.length);
-            audioData.set(inputData);
-
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(audioData.buffer); // Send raw audio data to Node.js
-            }
-        };
-
-        console.log("Microphone initialized and audio data being sent to Node.js.");
-    } catch (err) {
-        console.error("Error accessing microphone:", err);
-    }
-}
-
-// Create a ScriptProcessorNode for playback of audio received from Node.js
-function initPlayback() {
-    scriptNode = audioCtx.createScriptProcessor(2048, 1, 1);
-
-    scriptNode.onaudioprocess = (event) => {
-        const outputBuffer = event.outputBuffer.getChannelData(0);
-
-        if (audioBufferQueue.length > 0) {
-            const audioBuffer = audioBufferQueue.shift();
-            outputBuffer.set(audioBuffer); // Fill output buffer with audio data
-        } else {
-            outputBuffer.fill(0); // Fill with silence if no data is available
-        }
-    };
-
-    scriptNode.connect(audioCtx.destination);
-}
-
-// Handle incoming WebSocket messages (audio data from Pure Data)
-socket.onmessage = (event) => {
-    const incomingData = new Float32Array(event.data);
-    audioBufferQueue.push(incomingData); // Add received audio to the playback queue
-};
-
-// Log WebSocket connection status
-socket.onopen = () => {
-    console.log("WebSocket connection established.");
-};
-
-socket.onclose = () => {
-    console.log("WebSocket connection closed.");
-};
-
-socket.onerror = (error) => {
-    console.error("WebSocket error:", error);
-};
-
-// Play audio and visualization upon user interaction
-document.addEventListener("click", () => {
-    if (audioCtx.state === "suspended") {
-        audioCtx.resume(); // Resume audio context
-    }
-    if (!micStream) {
-        initMic(); // Initialize microphone input
-    }
-    if (!scriptNode) {
-        initPlayback(); // Initialize playback system
-    }
-});
-
-// Basic visualization setup (optional)
-function drawVisualization() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "white";
-    ctx.fillText("Audio Reactive Visualization Running...", canvas.width / 2 - 150, canvas.height / 2);
-
-    requestAnimationFrame(drawVisualization);
-}
-
-// Initialize visualization
-drawVisualization();
-
-// Adjust canvas size on window resize
-window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
-
-// Simplex Noise implementation (unchanged from your code)
+// Simplex Noise implementation
 class SimplexNoise {
     constructor() {
         this.grad3 = [[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0], [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1], [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]];
@@ -224,10 +118,74 @@ function updateTerrain() {
     }
 }
 
+// Cube system setup
+const cubes = [];
+
+class Cube {
+    constructor(size, position, depthFactor) {
+        this.size = size; // Size of the cube
+        this.position = position; // 3D position (x, y, z)
+        this.depthFactor = depthFactor; // Scaling factor for perspective
+    }
+
+    update() {
+        this.position.z -= 5; // Move the cube closer to the viewer
+        if (this.position.z <= 0) {
+            this.position.z = Math.random() * 800 + 200; // Reset depth when too close
+        }
+    }
+
+    draw(ctx) {
+        const perspective = 200 / this.position.z; // Perspective scaling
+        const screenX = this.position.x * perspective;
+        const screenY = this.position.y * perspective;
+        const size = this.size * perspective;
+
+        ctx.save();
+        ctx.strokeStyle = "rgb(0, 0, 255)"; // Blue stroke only for the cube
+
+        // Draw the cube outline
+        ctx.strokeRect(
+            canvas.width / 2 + screenX - size / 2,
+            canvas.height / 2 + screenY - size / 2,
+            size,
+            size
+        );
+        ctx.restore();
+    }
+}
+
+function spawnCubes() {
+    const unitSize = 20; // Base size for cubes
+    for (let i = 0; i < 10; i++) { // Adjust number of cubes
+        const size = Math.random() * unitSize + unitSize / 2;
+        const position = {
+            x: Math.random() * canvas.width - canvas.width / 2,
+            y: Math.random() * canvas.height - canvas.height / 2,
+            z: Math.random() * 1000 + 200 // Depth between 200 and 1200
+        };
+        const depthFactor = 1; // Optional scaling factor
+
+        let cube = new Cube(size, position, depthFactor);
+        cubes.push(cube);
+    }
+}
+
+function updateCubes() {
+    cubes.forEach((cube) => cube.update());
+}
+
+function drawCubes() {
+    cubes.forEach((cube) => cube.draw(ctx));
+}
+
 function drawTerrain() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.translate(canvas.width / 2, canvas.height / 2); // Center the view
+    ctx.scale(1.5, 1.5); // Zoom in the camera for better mobile visibility
     ctx.rotate(Math.PI / 2); // Rotate the terrain 90 degrees
+
+    ctx.strokeStyle = "rgb(0, 255, 0)";
 
     for (let y = 0; y < rows - 1; y++) {
         ctx.beginPath();
@@ -247,19 +205,25 @@ function drawTerrain() {
         ctx.stroke();
     }
     ctx.resetTransform(); // Reset transformations
+
+    drawCubes();
 }
 
 function animate() {
     playerZ += speed; // Move the player forward
     updateTerrain(); // Update the terrain
-    drawTerrain(); // Draw the terrain
+    updateCubes(); // Update cube positions
+    drawTerrain(); // Draw the terrain and cubes
     requestAnimationFrame(animate);
 }
 
-// Key controls for speed
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowUp') speed += 1;
-    if (event.key === 'ArrowDown') speed = Math.max(1, speed - 1);
+// Mobile tap-based movement
+canvas.addEventListener("touchstart", () => {
+    speed += 1; // Increase speed on tap
+});
+
+canvas.addEventListener("touchend", () => {
+    speed = Math.max(1, speed - 1); // Decrease speed when tap ends
 });
 
 // Initialize the audio setup
@@ -267,9 +231,10 @@ setupAudio();
 
 // Initialize the terrain and start the animation
 setupTerrain();
+spawnCubes();
 animate();
 
-// Adjust canvas size on window resize
+// Adjust canvas size for mobile devices
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
